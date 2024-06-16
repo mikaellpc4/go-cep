@@ -6,7 +6,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/GoCEP/internal/router"
+	"github.com/GoCEP/api/CEP/routes"
+	"github.com/GoCEP/internal/internalRouter"
 )
 
 type MyResponse struct {
@@ -14,14 +15,9 @@ type MyResponse struct {
 }
 
 func main() {
-	newRouter := router.NewRouter()
+	newRouter := internalRouter.NewRouter()
 
-	newRouter.POST("/cep", func(w router.ResponseWriter, r *http.Request) {
-    response := MyResponse{
-      Message: "DEU CERTO AEEEEE",
-    }
-    w.JSONResponse(200, response)
-	})
+  cep.Routes(newRouter)
 
 	l, err := net.Listen("tcp", ":8080")
 	if err != nil {
