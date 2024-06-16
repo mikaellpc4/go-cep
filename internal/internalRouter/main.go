@@ -60,7 +60,7 @@ func (r *Router) addRoute(method, endpoint string, handler HandlerFunc) {
 }
 
 func (router *Router) GROUP(prefix string, fn func(*Router)) {
-	router.prefix = prefix
+	router.prefix = router.prefix + prefix
 
 	fn(router)
 
