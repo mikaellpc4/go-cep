@@ -38,6 +38,10 @@ func (r *route) handler(w ResponseWriter, req *http.Request) {
 func (r *Router) addRoute(method, endpoint string, handler HandlerFunc) {
 	paramKeys := []string{}
 
+  if endpoint == "/" {
+    endpoint = ""
+  }
+
 	pathParamsPattern := regexp.MustCompile(":([a-z]+)")
 	matches := pathParamsPattern.FindAllStringSubmatch(endpoint, -1)
 
