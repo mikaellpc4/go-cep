@@ -1,21 +1,19 @@
-package cep
+package routes
 
 import (
 	"net/http"
 
+	controller "github.com/GoCEP/api/cep/controllers"
 	"github.com/GoCEP/internal/internalRouter"
 )
 
-func Routes(router *internalRouter.Router) {
-	router.GROUP("/api", func(router *internalRouter.Router) {
-		router.GET("/test", func(w internalRouter.ResponseWriter, request *http.Request) {
-			responseObj := map[string]string{
-				"message": "test get",
-			}
-			w.JSONResponse(200, responseObj)
-		})
-    
-		router.POST("/test", func(w internalRouter.ResponseWriter, request *http.Request) {
+func CepRoutes(router *internalRouter.Router) {
+	cepController := controller.NewCepController()
+
+	router.GROUP("/cep", func(router *internalRouter.Router) {
+		router.POST("/", cepController.Create)
+
+		router.POST("/", func(w internalRouter.ResponseWriter, request *http.Request) {
 			responseObj := map[string]string{
 				"message": "test post",
 			}
