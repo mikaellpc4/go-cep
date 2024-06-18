@@ -6,7 +6,10 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/GoCEP/api/cep/controllers"
+	"github.com/GoCEP/api/cep/repository/implementations"
 	"github.com/GoCEP/api/cep/routes"
+	"github.com/GoCEP/api/cep/services"
 	"github.com/GoCEP/internal/internalRouter"
 )
 
@@ -17,7 +20,11 @@ type MyResponse struct {
 func main() {
 	newRouter := internalRouter.NewRouter()
 
-  routes.CepRoutes(newRouter)
+	cepRepo := implementations.NewSqliteCepRepo()
+	cepService := services.NewCepService(cepRepo)
+	cepController := controllers.NewCepController(*cepService)
+
+	routes.CepRoutes(newRouter, *cepController)
 
 	l, err := net.Listen("tcp", ":8080")
 	if err != nil {

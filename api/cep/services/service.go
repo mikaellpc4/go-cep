@@ -21,14 +21,14 @@ func (cepService *CepService) Read(ctx context.Context, cep string) (*structs.Ce
 	return cepService.repo.Read(ctx, cep)
 }
 
-func (cepService *CepService) Create(ctx context.Context, cep structs.Cep) (*structs.Cep, error) {
+func (cepService *CepService) Create(ctx context.Context, cep structs.Cep) error {
 	return cepService.repo.Create(ctx, cep)
 }
 
-func (cepService *CepService) Update(ctx context.Context, cep structs.Cep) (*structs.Cep, error) {
+func (cepService *CepService) Update(ctx context.Context, cep structs.Cep) error {
 	return cepService.repo.Update(ctx, cep)
 }
 
-func (cepService *CepService) Delete(ctx context.Context, cepId int) error {
-	return cepService.repo.Delete(ctx, cepId)
+func (cepService *CepService) Delete(ctx context.Context, cep string) error {
+	return cepService.repo.Delete(ctx, cep)
 }

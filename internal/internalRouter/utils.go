@@ -47,5 +47,6 @@ func (w *ResponseWriter) JSONResponse(code int, responseObject any) {
 		w.StringResponse(http.StatusBadRequest, err.Error())
 	}
 	w.Header().Set("content-type", "application/json")
+
 	w.Write(response)
 }

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/GoCEP/internal/internalRouter"
 	"github.com/go-playground/validator/v10"
 )
 
@@ -13,13 +12,7 @@ type ValidationError struct {
 	Err   string
 }
 
-type ValidationErrors struct {
-	Field string
-	Err   string
-}
-
 func ValidateBody(
-	w *internalRouter.ResponseWriter,
 	r *http.Request,
 	validation interface{},
 	mappedValidation map[string]string,
