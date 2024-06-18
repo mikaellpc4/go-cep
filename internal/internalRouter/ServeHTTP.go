@@ -9,7 +9,7 @@ import (
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	var allow []string
 
-  responseWriter := NewResponseWriter(w)
+	responseWriter := NewResponseWriter(w)
 
 	for _, route := range r.routes {
 		matches := route.pattern.FindStringSubmatch(req.URL.Path)

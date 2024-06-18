@@ -7,7 +7,7 @@ import (
 
 func CepRoutes(router *internalRouter.Router, cepController controllers.CepController) {
 	router.GROUP("/cep", func(router *internalRouter.Router) {
-    router.POST("/", cepController.Create)
-    router.GET("/:id", cepController.Read)
+		router.POST("/", cepController.Create)
+		router.GET("/:id", cepController.Read)
 	})
 }

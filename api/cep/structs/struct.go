@@ -21,5 +21,5 @@ type Cep struct {
 }
 
 type GetCep struct {
-	ZipCode     string `json:"zipCode"      validate:"required"`
+	ZipCode string `json:"zipCode"      validate:"required"`
 }

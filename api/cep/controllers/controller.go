@@ -27,7 +27,7 @@ func (c *CepController) Read(w internalRouter.ResponseWriter, r *http.Request) {
 	data, err := c.cepService.Read(ctx, id)
 	if err != nil {
 		w.JSONResponse(400, err)
-    return
+		return
 	}
 
 	w.JSONResponse(200, data)
@@ -53,7 +53,7 @@ func (c *CepController) Create(w internalRouter.ResponseWriter, r *http.Request)
 	err = c.cepService.Create(ctx, cep)
 	if err != nil {
 		w.JSONResponse(400, err.Error())
-    return
+		return
 	}
 
 	w.JSONResponse(http.StatusOK, cep)

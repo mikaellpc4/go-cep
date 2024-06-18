@@ -43,8 +43,8 @@ func NewSqliteCepRepo() *SqliteCepRepository {
 	)
 
 	if err != nil {
-    error := fmt.Errorf("failed to create table cep: %w", err)
-    panic(error)
+		error := fmt.Errorf("failed to create table cep: %w", err)
+		panic(error)
 	}
 
 	return &SqliteCepRepository{
@@ -75,13 +75,13 @@ func (sr *SqliteCepRepository) Read(ctx context.Context, cep string) (*structs.C
 		&result.Uf,
 		&result.IbgeCode,
 	)
-  if err != nil {
-    if err == sql.ErrNoRows {
-      return nil, nil
-    }
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
 
-    return nil, fmt.Errorf("faied to read cep: %w", err)
-  }
+		return nil, fmt.Errorf("faied to read cep: %w", err)
+	}
 
 	return &result, nil
 }
