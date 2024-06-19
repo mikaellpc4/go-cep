@@ -8,8 +8,9 @@ import (
 
 	"github.com/GoCEP/api/cep/controllers"
 	"github.com/GoCEP/api/cep/repository/implementations"
-	"github.com/GoCEP/api/cep/routes"
 	"github.com/GoCEP/api/cep/services"
+	"github.com/GoCEP/api/cep/routes"
+	"github.com/GoCEP/internal/internalGit"
 	"github.com/GoCEP/internal/internalRouter"
 )
 
@@ -18,6 +19,22 @@ type MyResponse struct {
 }
 
 func main() {
+	dir, _ := os.Getwd()
+
+	dataDir := dir + "/data"
+
+	// Check if openCEP db is present
+	if _, err := os.Stat(dataDir); err != nil {
+		err := internalGit.GitCloneWithDepth(
+			"https://github.com/SeuAliado/OpenCEP.git",
+			dataDir,
+			1,
+		)
+		if err != nil {
+      panic("erro ao realizar o download do repositorio do OpenCEP")
+		}
+	}
+
 	newRouter := internalRouter.NewRouter()
 
 	cepRepo := implementations.NewSqliteCepRepo()
