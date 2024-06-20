@@ -26,9 +26,14 @@ func (c *CepController) Read(w internalRouter.ResponseWriter, r *http.Request) {
 
 	data, err := c.cepService.Read(ctx, id)
 	if err != nil {
-		w.JSONResponse(400, err)
+		w.JSONResponse(http.StatusBadRequest, err)
 		return
 	}
+
+  if data == nil {
+		w.WriteHeader(http.StatusNotFound)
+    return
+  }
 
 	w.JSONResponse(200, data)
 }
