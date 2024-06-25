@@ -2,9 +2,12 @@ package services
 
 import (
 	"context"
+	"fmt"
+	"os"
 
 	"github.com/GoCEP/api/cep/repository"
 	"github.com/GoCEP/api/cep/structs"
+	"github.com/GoCEP/internal/download"
 )
 
 type CepService struct {
@@ -33,6 +36,16 @@ func (cepService *CepService) Delete(ctx context.Context, cep string) error {
 	return cepService.repo.Delete(ctx, cep)
 }
 
-func (cepService *CepService) UpdateRepo(ctx context.Context) error {
-  return nil
+func (cepService *CepService) UpdateData(ctx context.Context) error {
+	fmt.Println("Baixando dados de cep")
+	dir, _ := os.Getwd()
+
+	dataDir := dir + os.Getenv("CEP_DIR")
+
+	err := download.File(os.Getenv("CEP_DATA_URL"), dataDir)
+	if err != nil {
+		return fmt.Errorf("failed to download CEP data: %w", err)
+	}
+
+	return nil
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"net/http"
@@ -19,13 +20,24 @@ type MyResponse struct {
 }
 
 func main() {
-  initializers.LoadEnv()
-  initializers.VerifyAndDownloadCepData()
+	initializers.LoadEnv()
 
 	newRouter := internalRouter.NewRouter()
 
 	cepRepo := implementations.NewSqliteCepRepo()
 	cepService := services.NewCepService(cepRepo)
+
+	hasCepData := initializers.HasCepData()
+
+	if !hasCepData {
+		ctx := context.Background()
+
+		err := cepService.UpdateData(ctx)
+		if err != nil {
+			panic(err)
+		}
+	}
+
 	cepController := controllers.NewCepController(*cepService)
 
 	routes.CepRoutes(newRouter, *cepController)
