@@ -29,18 +29,18 @@ func main() {
 
 	hasCepData := initializers.HasCepData()
 
-	if !hasCepData {
-		ctx := context.Background()
+  if !hasCepData {
+    ctx := context.Background()
 
-		err := cepService.UpdateData(ctx)
-		if err != nil {
-			panic(err)
-		}
-	}
+    err := cepService.UpdateData(ctx)
+    if err != nil {
+      panic(err)
+    }
+  }
 
 	cepController := controllers.NewCepController(*cepService)
 
-	routes.CepRoutes(newRouter, *cepController)
+	routes.CepRoutes(newRouter, cepController)
 
 	l, err := net.Listen("tcp", ":8080")
 	if err != nil {

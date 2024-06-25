@@ -1,7 +1,9 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
+	"sync"
 
 	"github.com/GoCEP/api/cep/services"
 	"github.com/GoCEP/api/cep/structs"
@@ -10,7 +12,9 @@ import (
 )
 
 type CepController struct {
-	cepService services.CepService
+	cepService      services.CepService
+	updateDataMutex sync.Mutex
+	isUpdatingData  bool
 }
 
 func NewCepController(cepService services.CepService) *CepController {
@@ -30,10 +34,10 @@ func (c *CepController) Read(w internalRouter.ResponseWriter, r *http.Request) {
 		return
 	}
 
-  if data == nil {
+	if data == nil {
 		w.WriteHeader(http.StatusNotFound)
-    return
-  }
+		return
+	}
 
 	w.JSONResponse(200, data)
 }
@@ -64,14 +68,24 @@ func (c *CepController) Create(w internalRouter.ResponseWriter, r *http.Request)
 	w.JSONResponse(http.StatusOK, cep)
 }
 
-func (c *CepController) UpdateRepo(w internalRouter.ResponseWriter, r *http.Request) {
+func (c *CepController) UpdateData(w internalRouter.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-  err := c.cepService.UpdateData(ctx)
-	if err != nil {
-		w.JSONResponse(400, err.Error())
+	c.updateDataMutex.Lock()
+	if c.isUpdatingData {
+		c.updateDataMutex.Unlock()
+		w.StringResponse(http.StatusConflict, "Outra atualização ja está em progresso")
 		return
 	}
+	c.isUpdatingData = true
+	c.updateDataMutex.Unlock()
+
+	go func() {
+		if err := c.cepService.UpdateData(ctx); err != nil {
+			log.Printf("Error updating data: %v", err)
+		}
+		c.isUpdatingData = false
+	}()
 
 	w.WriteHeader(http.StatusOK)
 }

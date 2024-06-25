@@ -37,12 +37,15 @@ func (cepService *CepService) Delete(ctx context.Context, cep string) error {
 }
 
 func (cepService *CepService) UpdateData(ctx context.Context) error {
-	fmt.Println("Baixando dados de cep")
-	dir, _ := os.Getwd()
+	dir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get current directory: %w", err)
+	}
 
 	dataDir := dir + os.Getenv("CEP_DIR")
+	fmt.Printf("Downloading cep data to %s\n", dataDir)
 
-	err := download.File(os.Getenv("CEP_DATA_URL"), dataDir)
+	err = download.File(os.Getenv("CEP_DATA_URL"), dataDir)
 	if err != nil {
 		return fmt.Errorf("failed to download CEP data: %w", err)
 	}
