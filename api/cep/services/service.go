@@ -32,3 +32,7 @@ func (cepService *CepService) Update(ctx context.Context, cep structs.Cep) error
 func (cepService *CepService) Delete(ctx context.Context, cep string) error {
 	return cepService.repo.Delete(ctx, cep)
 }
+
+func (cepService *CepService) UpdateRepo(ctx context.Context) error {
+  return nil
+}

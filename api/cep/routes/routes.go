@@ -9,5 +9,6 @@ func CepRoutes(router *internalRouter.Router, cepController controllers.CepContr
 	router.GROUP("/cep", func(router *internalRouter.Router) {
 		router.POST("/", cepController.Create)
 		router.GET("/:id", cepController.Read)
+		router.POST("/update", cepController.UpdateRepo)
 	})
 }

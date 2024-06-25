@@ -63,3 +63,15 @@ func (c *CepController) Create(w internalRouter.ResponseWriter, r *http.Request)
 
 	w.JSONResponse(http.StatusOK, cep)
 }
+
+func (c *CepController) UpdateRepo(w internalRouter.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+  err := c.cepService.UpdateRepo(ctx)
+	if err != nil {
+		w.JSONResponse(400, err.Error())
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
