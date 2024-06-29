@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/k0kubun/go-ansi"
 	"github.com/schollz/progressbar/v3"
@@ -67,7 +66,7 @@ func File(url string, filePath string) error {
 			if err := os.Remove(oldPath); err != nil {
 				return err
 			}
-			fmt.Printf("\nDeleted existing file: %s", oldPath)
+			fmt.Printf("\nDeleted existing .old file: %s", oldPath)
 		}
 
 		if err := os.Rename(filePath, oldPath); err != nil {
@@ -76,6 +75,7 @@ func File(url string, filePath string) error {
 		fmt.Printf("\nMoved existing file %s to %s", filePath, oldPath)
 	}
 
+  fmt.Printf("\nMoved temp file %s to %s", tmpFile.Name(), filePath)
 	if err := os.Rename(tmpFile.Name(), filePath); err != nil {
 		return err
 	}
