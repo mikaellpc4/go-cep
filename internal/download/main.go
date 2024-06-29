@@ -5,54 +5,57 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"time"
 
-	"github.com/dustin/go-humanize"
+	"github.com/k0kubun/go-ansi"
+	"github.com/schollz/progressbar/v3"
 )
 
-type WriteCounter struct {
-	InitialBytes bool
-	TotalWritten uint64
-	DataTotal    uint64
-}
-
-func (wc *WriteCounter) Write(data []byte) (int, error) {
-	bytesWriten := len(data)
-	wc.TotalWritten += uint64(bytesWriten)
-	wc.PrintProgress(&wc.InitialBytes)
-
-	return bytesWriten, nil
-}
-
-func (wc WriteCounter) PrintProgress(initial *bool) {
-	percent := float64(wc.TotalWritten) / float64(wc.DataTotal) * 100
-	written := humanize.Bytes(wc.TotalWritten)
-	total := humanize.Bytes(wc.DataTotal)
-
-	if !*initial {
-		fmt.Printf("\033[1A\033[K")
-	} else {
-		*initial = false
-	}
-
-	fmt.Printf("\rDownloding %s/%s, %.2f%% complete\n", written, total, percent)
-}
-
 func File(url string, filePath string) error {
-	tmpFile, err := os.CreateTemp("", "go-cep-download-*.tmp")
-	if err != nil {
-		return err
-	}
-	defer tmpFile.Close()
-
 	resp, err := http.Get(url)
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if cerr := resp.Body.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
 
-	progressCounter := &WriteCounter{DataTotal: uint64(resp.ContentLength), InitialBytes: true}
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("bad status: %s", resp.Status)
+	}
 
-	_, err = io.Copy(io.MultiWriter(tmpFile, progressCounter), resp.Body)
+	tmpFile, err := os.CreateTemp("", "go-cep-download-*.tmp")
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if cerr := tmpFile.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+		if err != nil {
+			os.Remove(tmpFile.Name())
+		}
+	}()
+
+	text := fmt.Sprintf("[cyan][1/3][reset] Download cep data to %s", tmpFile.Name())
+
+	bar := progressbar.NewOptions(int(resp.ContentLength),
+		progressbar.OptionSetWriter(ansi.NewAnsiStdout()), //you should install "github.com/k0kubun/go-ansi"
+		progressbar.OptionEnableColorCodes(true),
+		progressbar.OptionShowBytes(true),
+		progressbar.OptionSetWidth(15),
+		progressbar.OptionSetDescription(text),
+		progressbar.OptionSetTheme(progressbar.Theme{
+			Saucer:        "[green]=[reset]",
+			SaucerHead:    "[green]>[reset]",
+			SaucerPadding: " ",
+			BarStart:      "[",
+			BarEnd:        "]",
+		}))
+
+	_, err = io.Copy(io.MultiWriter(tmpFile, bar), resp.Body)
 	if err != nil {
 		return err
 	}
@@ -64,13 +67,13 @@ func File(url string, filePath string) error {
 			if err := os.Remove(oldPath); err != nil {
 				return err
 			}
-			fmt.Printf("Deleted existing file: %s\n", oldPath)
+			fmt.Printf("\nDeleted existing file: %s", oldPath)
 		}
 
 		if err := os.Rename(filePath, oldPath); err != nil {
 			return err
 		}
-		fmt.Printf("Moved existing file %s to %s\n", filePath, oldPath)
+		fmt.Printf("\nMoved existing file %s to %s", filePath, oldPath)
 	}
 
 	if err := os.Rename(tmpFile.Name(), filePath); err != nil {

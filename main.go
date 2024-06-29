@@ -29,14 +29,26 @@ func main() {
 
 	hasCepData := initializers.HasCepData()
 
-  if !hasCepData {
-    ctx := context.Background()
+	// filesChan := make(chan []string, 100)
+	// doneChan := make(chan bool)
+	// var wg sync.WaitGroup
+	//
+	// dir, err := os.Getwd()
+	//
+	// wg.Add(1)
+	// go insertData.UnzipCeps(dir + "/data/ceps/test.zip", filesChan, doneChan)
+ //  go insertData.InsertToDB(cepRepo, filesChan, doneChan, &wg)
+	//
+ //  wg.Wait()
 
-    err := cepService.UpdateData(ctx)
-    if err != nil {
-      panic(err)
-    }
-  }
+	if !hasCepData {
+		ctx := context.Background()
+
+		err := cepService.UpdateData(ctx)
+		if err != nil {
+			panic(err)
+		}
+	}
 
 	cepController := controllers.NewCepController(*cepService)
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path"
 
 	"github.com/GoCEP/api/cep/repository"
 	"github.com/GoCEP/api/cep/structs"
@@ -28,6 +29,10 @@ func (cepService *CepService) Create(ctx context.Context, cep structs.Cep) error
 	return cepService.repo.Create(ctx, cep)
 }
 
+func (cepService *CepService) CreateMany(ctx context.Context, ceps []structs.Cep) error {
+	return cepService.repo.CreateMany(ctx, ceps)
+}
+
 func (cepService *CepService) Update(ctx context.Context, cep structs.Cep) error {
 	return cepService.repo.Update(ctx, cep)
 }
@@ -42,10 +47,19 @@ func (cepService *CepService) UpdateData(ctx context.Context) error {
 		return fmt.Errorf("failed to get current directory: %w", err)
 	}
 
-	dataDir := dir + os.Getenv("CEP_DIR")
-	fmt.Printf("Downloading cep data to %s\n", dataDir)
+	dataLocation := dir + os.Getenv("CEP_ZIP_DIR")
 
-	err = download.File(os.Getenv("CEP_DATA_URL"), dataDir)
+	dataDir := path.Dir(dataLocation)
+	_, err = os.Stat(dataDir)
+	if err != nil {
+		err = os.MkdirAll(dataDir, 0755)
+
+		if err != nil {
+			return fmt.Errorf("failed to mkdir, %s | error: %s", dataDir, err)
+		}
+	}
+
+	err = download.File(os.Getenv("CEP_DATA_URL"), dataLocation)
 	if err != nil {
 		return fmt.Errorf("failed to download CEP data: %w", err)
 	}

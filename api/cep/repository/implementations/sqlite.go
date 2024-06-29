@@ -110,6 +110,47 @@ func (sr *SqliteCepRepository) Create(ctx context.Context, cep structs.Cep) erro
 	return nil
 }
 
+func (sr *SqliteCepRepository) CreateMany(ctx context.Context, ceps []structs.Cep) error {
+	tx, err := sr.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("couldn't begin transaction")
+	}
+
+	stmt, err := tx.PrepareContext(ctx, `
+		INSERT INTO ceps (CEP, LOGRADOURO, COMPLEMENTO, BAIRRO, LOCALIDADE, UF, IBGE) 
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+  `)
+	if err != nil {
+		return fmt.Errorf("couldn't prepare statement")
+	}
+	defer stmt.Close()
+
+	for _, cep := range ceps {
+		_, err := stmt.ExecContext(ctx,
+			cep.ZipCode,
+			cep.PublicPlace,
+			cep.Complement,
+			cep.District,
+			cep.Place,
+			cep.Uf,
+			cep.IbgeCode,
+		)
+		if err != nil {
+			err := tx.Rollback()
+			if err != nil {
+				return fmt.Errorf("could not execute statement and rollback, error: %s", err)
+			}
+			return fmt.Errorf("could not execute statement, error: %s", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("could not commit transaction, error: %s", err)
+	}
+
+	return nil
+}
+
 func (sr *SqliteCepRepository) Update(ctx context.Context, cep structs.Cep) error {
 	return nil
 }
