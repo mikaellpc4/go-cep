@@ -111,7 +111,7 @@ func (sr *SqliteCepRepository) Create(ctx context.Context, cep structs.Cep) erro
 	return nil
 }
 
-func (sr *SqliteCepRepository) CreateMany(ctx context.Context, ceps []structs.Cep) error {
+func (sr *SqliteCepRepository) CreateAndUpdateMany(ctx context.Context, ceps []structs.Cep) error {
 	tx, err := sr.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("couldn't begin transaction")

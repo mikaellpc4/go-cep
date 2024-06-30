@@ -32,7 +32,7 @@ func (cepService *CepService) Create(ctx context.Context, cep structs.Cep) error
 }
 
 func (cepService *CepService) CreateMany(ctx context.Context, ceps []structs.Cep) error {
-	return cepService.repo.CreateMany(ctx, ceps)
+	return cepService.repo.CreateAndUpdateMany(ctx, ceps)
 }
 
 func (cepService *CepService) Update(ctx context.Context, cep structs.Cep) error {

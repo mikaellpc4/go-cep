@@ -30,7 +30,7 @@ func InsertToDB(repo repository.CepRepositary, filesJSON chan [][]byte, doneChan
 
 				ceps = append(ceps, cep)
 			}
-			err := repo.CreateMany(context.Background(), ceps)
+			err := repo.CreateAndUpdateMany(context.Background(), ceps)
 			if err != nil {
 				log.Fatal(err)
 			}
