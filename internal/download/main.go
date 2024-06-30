@@ -25,7 +25,7 @@ func File(url string, filePath string) error {
 		return fmt.Errorf("bad status: %s", resp.Status)
 	}
 
-	tmpFile, err := os.CreateTemp("", "go-cep-download-*.tmp")
+	tmpFile, err := os.CreateTemp("/tmp", "go-cep-download-*.tmp")
 	if err != nil {
 		return err
 	}
@@ -38,7 +38,7 @@ func File(url string, filePath string) error {
 		}
 	}()
 
-	text := fmt.Sprintf("[cyan][1/3][reset] Download cep data to %s", tmpFile.Name())
+	text := fmt.Sprintf("[cyan][1/3][reset] Downloading cep data to %s", tmpFile.Name())
 
 	bar := progressbar.NewOptions(int(resp.ContentLength),
 		progressbar.OptionSetWriter(ansi.NewAnsiStdout()), //you should install "github.com/k0kubun/go-ansi"
@@ -75,10 +75,27 @@ func File(url string, filePath string) error {
 		fmt.Printf("\nMoved existing file %s to %s", filePath, oldPath)
 	}
 
-  fmt.Printf("\nMoved temp file %s to %s", tmpFile.Name(), filePath)
-	if err := os.Rename(tmpFile.Name(), filePath); err != nil {
+	src, err := os.Open(tmpFile.Name())
+	if err != nil {
 		return err
 	}
+	defer src.Close()
+
+	dst, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	defer dst.Close()
+
+	if _, err := io.Copy(dst, src); err != nil {
+		return err
+	}
+
+	if err := os.Remove(tmpFile.Name()); err != nil {
+		return err
+	}
+
+	fmt.Printf("\nMoved temp file %s to %s", tmpFile.Name(), filePath)
 
 	return nil
 }

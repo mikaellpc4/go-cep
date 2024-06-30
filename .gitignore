@@ -1,3 +1,6 @@
 data/
 GoCEP
 .env
+
+# Air tmp files
+tmp/
