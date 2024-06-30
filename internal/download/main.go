@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/k0kubun/go-ansi"
-	"github.com/schollz/progressbar/v3"
+	"github.com/GoCEP/internal/progressBar"
+	"github.com/mitchellh/colorstring"
 )
 
 func File(url string, filePath string) error {
@@ -40,19 +40,7 @@ func File(url string, filePath string) error {
 
 	text := fmt.Sprintf("[cyan][1/3][reset] Downloading cep data to %s", tmpFile.Name())
 
-	bar := progressbar.NewOptions(int(resp.ContentLength),
-		progressbar.OptionSetWriter(ansi.NewAnsiStdout()), //you should install "github.com/k0kubun/go-ansi"
-		progressbar.OptionEnableColorCodes(true),
-		progressbar.OptionShowBytes(true),
-		progressbar.OptionSetWidth(15),
-		progressbar.OptionSetDescription(text),
-		progressbar.OptionSetTheme(progressbar.Theme{
-			Saucer:        "[green]=[reset]",
-			SaucerHead:    "[green]>[reset]",
-			SaucerPadding: " ",
-			BarStart:      "[",
-			BarEnd:        "]",
-		}))
+	bar := progressBar.Create(int(resp.ContentLength), text)
 
 	_, err = io.Copy(io.MultiWriter(tmpFile, bar), resp.Body)
 	if err != nil {
@@ -66,20 +54,22 @@ func File(url string, filePath string) error {
 			if err := os.Remove(oldPath); err != nil {
 				return err
 			}
-			fmt.Printf("\nDeleted existing .old file: %s", oldPath)
+			colorizedString := colorstring.Color("[cyan][2/3][reset] Deleted existing .old file " + oldPath)
+			fmt.Println(colorizedString)
 		}
 
 		if err := os.Rename(filePath, oldPath); err != nil {
 			return err
 		}
-		fmt.Printf("\nMoved existing file %s to %s", filePath, oldPath)
+		colorizedString := colorstring.Color("[cyan][2/3][reset] Moved existing file " + filePath + " to " + oldPath)
+		fmt.Println(colorizedString)
 	}
 
-	src, err := os.Open(tmpFile.Name())
-	if err != nil {
-		return err
-	}
-	defer src.Close()
+  src, err := os.Open(tmpFile.Name())
+  if err != nil {
+    return err
+  }
+  defer src.Close()
 
 	dst, err := os.Create(filePath)
 	if err != nil {
@@ -87,15 +77,19 @@ func File(url string, filePath string) error {
 	}
 	defer dst.Close()
 
-	if _, err := io.Copy(dst, src); err != nil {
+	fileInfo, err := tmpFile.Stat()
+	if err != nil {
 		return err
 	}
 
-	if err := os.Remove(tmpFile.Name()); err != nil {
+	size := fileInfo.Size()
+
+	text = fmt.Sprintf("[cyan][2/3][reset] Saving %s", filePath)
+	bar = progressBar.Create(int(size), text)
+
+	if _, err := io.Copy(io.MultiWriter(dst, bar), src); err != nil {
 		return err
 	}
-
-	fmt.Printf("\nMoved temp file %s to %s", tmpFile.Name(), filePath)
 
 	return nil
 }

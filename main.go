@@ -6,12 +6,15 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"sync"
+	"time"
 
 	"github.com/GoCEP/api/cep/controllers"
 	"github.com/GoCEP/api/cep/repository/implementations"
 	"github.com/GoCEP/api/cep/routes"
 	"github.com/GoCEP/api/cep/services"
 	"github.com/GoCEP/initializers"
+	"github.com/GoCEP/internal/insertData"
 	"github.com/GoCEP/internal/internalRouter"
 )
 
@@ -29,17 +32,34 @@ func main() {
 
 	hasCepData := initializers.HasCepData()
 
-	// filesChan := make(chan []string, 100)
-	// doneChan := make(chan bool)
-	// var wg sync.WaitGroup
-	//
-	// dir, err := os.Getwd()
-	//
-	// wg.Add(1)
-	// go insertData.UnzipCeps(dir + "/data/ceps/test.zip", filesChan, doneChan)
- //  go insertData.InsertToDB(cepRepo, filesChan, doneChan, &wg)
-	//
- //  wg.Wait()
+	unprocessedFilesChan := make(chan []string)
+	filesJSON := make(chan [][]byte)
+	doneZipChan := make(chan bool)
+	doneChan := make(chan bool)
+	var wg sync.WaitGroup
+
+	dir, _ := os.Getwd()
+
+  start := time.Now()
+
+	wg.Add(1)
+	go func() {
+		insertData.UnzipCeps(dir+"/data/cep/data.zip", unprocessedFilesChan, doneZipChan, &wg)
+	}()
+
+	wg.Add(1)
+	go func() {
+		insertData.CleanJSON(unprocessedFilesChan, filesJSON, doneChan, doneZipChan, &wg)
+	}()
+
+	wg.Add(1)
+	go func() {
+		go insertData.InsertToDB(cepRepo, filesJSON, doneChan, &wg)
+	}()
+
+	wg.Wait()
+
+	fmt.Printf("\nFinshed inserting, took %s\n",time.Since(start))
 
 	if !hasCepData {
 		ctx := context.Background()

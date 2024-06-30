@@ -5,12 +5,14 @@ import (
 	"io"
 	"log"
 	"os"
-	"strconv"
+	"sync"
+
+	"github.com/GoCEP/internal/progressBar"
 )
 
-func UnzipCeps(zipFile string, filesChan chan<- []string, doneChan chan<- bool) {
-	defer close(filesChan)
+func UnzipCeps(zipFile string, unprocessedFilesChan chan<- []string, doneChan chan<- bool, wg *sync.WaitGroup) {
 	defer close(doneChan)
+	defer wg.Done()
 
 	r, err := zip.OpenReader(zipFile)
 	if err != nil {
@@ -22,19 +24,18 @@ func UnzipCeps(zipFile string, filesChan chan<- []string, doneChan chan<- bool) 
 		}
 	}()
 
-	batchEnv := os.Getenv("MAX_BATCH_SIZE")
-	batchSize, err := strconv.Atoi(batchEnv)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var batch []string
+  bar := progressBar.Create(len(r.File), "Extraindo ZIP e Inserindo no banco de dados")
+
+	var files []string
 	for _, file := range r.File {
 		tmpFile, err := os.CreateTemp("", "go-cep-*.tmp")
 		if err != nil {
 			log.Fatal(err)
 		}
-		defer tmpFile.Close()
 
 		rc, err := file.Open()
 		if err != nil {
@@ -46,16 +47,19 @@ func UnzipCeps(zipFile string, filesChan chan<- []string, doneChan chan<- bool) 
 			log.Fatal(err)
 		}
 		rc.Close()
+		tmpFile.Close()
 
-		batch := append(batch, tmpFile.Name())
-		if len(batch) >= batchSize {
-			filesChan <- batch
-			batch = nil
+		files = append(files, tmpFile.Name())
+    bar.Add(1)
+
+		if len(files) > 10000 {
+			unprocessedFilesChan <- files
+			files = nil
 		}
 	}
 
-	if len(batch) > 0 {
-		filesChan <- batch
+	if len(files) > 0 {
+		unprocessedFilesChan <- files
 	}
 
 	doneChan <- true

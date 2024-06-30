@@ -11,13 +11,13 @@ var CepFieldsToJSONMap = map[string]string{
 }
 
 type Cep struct {
-	ZipCode     string `json:"zipCode"      validate:"required"`
-	PublicPlace string `json:"publicPlace"  validate:"required"`
-	Complement  string `json:"complement"   validate:""`
-	District    string `json:"district"     validate:"required"`
-	Place       string `json:"place"        validate:"required"`
+	ZipCode     string `json:"cep"      validate:"required"`
+	PublicPlace string `json:"logradouro"  validate:"required"`
+	Complement  string `json:"complemento"   validate:""`
+	District    string `json:"bairro"     validate:"required"`
+	Place       string `json:"localidade"        validate:"required"`
 	Uf          string `json:"uf"           validate:"required"`
-	IbgeCode    string `json:"ibgeCode"     validate:"required"`
+	IbgeCode    string `json:"ibge"     validate:"required"`
 }
 
 type GetCep struct {

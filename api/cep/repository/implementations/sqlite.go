@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 
 	"github.com/GoCEP/api/cep/structs"
 	_ "github.com/mattn/go-sqlite3"
@@ -115,13 +116,21 @@ func (sr *SqliteCepRepository) CreateMany(ctx context.Context, ceps []structs.Ce
 	if err != nil {
 		return fmt.Errorf("couldn't begin transaction")
 	}
+	defer func() {
+		if err != nil {
+			rollbackErr := tx.Rollback()
+			if rollbackErr != nil {
+				log.Printf("rollback failed: %s", rollbackErr)
+			}
+		}
+	}()
 
 	stmt, err := tx.PrepareContext(ctx, `
 		INSERT INTO ceps (CEP, LOGRADOURO, COMPLEMENTO, BAIRRO, LOCALIDADE, UF, IBGE) 
 		VALUES (?, ?, ?, ?, ?, ?, ?)
   `)
 	if err != nil {
-		return fmt.Errorf("couldn't prepare statement")
+		return fmt.Errorf("failed to prepare statement: %s", err)
 	}
 	defer stmt.Close()
 
@@ -136,10 +145,6 @@ func (sr *SqliteCepRepository) CreateMany(ctx context.Context, ceps []structs.Ce
 			cep.IbgeCode,
 		)
 		if err != nil {
-			err := tx.Rollback()
-			if err != nil {
-				return fmt.Errorf("could not execute statement and rollback, error: %s", err)
-			}
 			return fmt.Errorf("could not execute statement, error: %s", err)
 		}
 	}

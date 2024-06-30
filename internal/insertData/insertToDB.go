@@ -3,53 +3,41 @@ package insertData
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
-	"os"
 	"sync"
 
 	"github.com/GoCEP/api/cep/repository"
 	"github.com/GoCEP/api/cep/structs"
 )
 
-func InsertToDB(repo repository.CepRepositary, filesChan <-chan []string, doneChan <-chan bool, wg *sync.WaitGroup) {
+func InsertToDB(repo repository.CepRepositary, filesJSON chan [][]byte, doneChan <-chan bool, wg *sync.WaitGroup) {
 	defer wg.Done()
+	defer close(filesJSON)
 
 	for {
 		select {
-		case batch, ok := <-filesChan:
+		case files, ok := <-filesJSON:
 			if !ok {
 				return
 			}
-
-			for _, file := range batch {
-				data, err := os.ReadFile(file)
-				if err != nil {
-					log.Fatal(err)
-				}
-
+			var ceps []structs.Cep
+			for _, fileJSON := range files {
 				var cep structs.Cep
-				err = json.Unmarshal(data, &cep)
+				err := json.Unmarshal(fileJSON, &cep)
 				if err != nil {
-					log.Fatal(err)
+					continue
 				}
 
-				// Insert data using repository method
-				err = repo.Create(context.Background(), cep)
-				if err != nil {
-					log.Fatal(err)
-				}
-
-				// Remove the temporary file
-				err = os.Remove(file)
-				if err != nil {
-					log.Fatal(err)
-				}
+				ceps = append(ceps, cep)
 			}
-
-		case <-doneChan:
-      fmt.Println("true")
-			return
+			err := repo.CreateMany(context.Background(), ceps)
+			if err != nil {
+				log.Fatal(err)
+			}
+		case done := <-doneChan:
+			if done {
+				return
+			}
 		}
 	}
 }
