@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/GoCEP/internal/progressBar"
-	"github.com/mitchellh/colorstring"
 )
 
 func File(url string, filePath string) error {
@@ -38,7 +37,7 @@ func File(url string, filePath string) error {
 		}
 	}()
 
-	text := fmt.Sprintf("[cyan][1/3][reset] Downloading cep data to %s", tmpFile.Name())
+	text := fmt.Sprintf("[cyan][1/4][reset] Downloading cep data to %s", tmpFile.Name())
 
 	bar := progressBar.Create(int(resp.ContentLength), text)
 
@@ -54,15 +53,11 @@ func File(url string, filePath string) error {
 			if err := os.Remove(oldPath); err != nil {
 				return err
 			}
-			colorizedString := colorstring.Color("[cyan][2/3][reset] Deleted existing .old file " + oldPath)
-			fmt.Println(colorizedString)
 		}
 
 		if err := os.Rename(filePath, oldPath); err != nil {
 			return err
 		}
-		colorizedString := colorstring.Color("[cyan][2/3][reset] Moved existing file " + filePath + " to " + oldPath)
-		fmt.Println(colorizedString)
 	}
 
   src, err := os.Open(tmpFile.Name())
@@ -84,7 +79,7 @@ func File(url string, filePath string) error {
 
 	size := fileInfo.Size()
 
-	text = fmt.Sprintf("[cyan][2/3][reset] Saving %s", filePath)
+	text = fmt.Sprintf("[cyan][3/4][reset] Saving %s", filePath)
 	bar = progressBar.Create(int(size), text)
 
 	if _, err := io.Copy(io.MultiWriter(dst, bar), src); err != nil {

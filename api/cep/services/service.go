@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"sync"
 
 	"github.com/GoCEP/api/cep/repository"
 	"github.com/GoCEP/api/cep/structs"
 	"github.com/GoCEP/internal/download"
+	"github.com/GoCEP/internal/insertData"
 )
 
 type CepService struct {
@@ -47,7 +49,7 @@ func (cepService *CepService) UpdateData(ctx context.Context) error {
 		return fmt.Errorf("failed to get current directory: %w", err)
 	}
 
-	dataLocation := dir + os.Getenv("CEP_ZIP_DIR")
+	dataLocation := dir + os.Getenv("CEP_ZIP_LOCATION")
 
 	dataDir := path.Dir(dataLocation)
 	_, err = os.Stat(dataDir)
@@ -63,6 +65,31 @@ func (cepService *CepService) UpdateData(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to download CEP data: %w", err)
 	}
+
+	unprocessedFilesChan := make(chan []string)
+	filesJSON := make(chan [][]byte)
+	doneZipChan := make(chan bool)
+	doneChan := make(chan bool)
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		insertData.UnzipCeps(dataLocation, unprocessedFilesChan, doneZipChan, &wg)
+	}()
+
+	wg.Add(1)
+	go func() {
+		insertData.CleanJSON(unprocessedFilesChan, filesJSON, doneChan, doneZipChan, &wg)
+	}()
+
+	wg.Add(1)
+	go func() {
+		go insertData.InsertToDB(cepService.repo, filesJSON, doneChan, &wg)
+	}()
+
+	wg.Wait()
+
+  fmt.Println("finished CEP Update")
 
 	return nil
 }

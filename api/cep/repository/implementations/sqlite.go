@@ -29,7 +29,7 @@ func NewSqliteCepRepo() *SqliteCepRepository {
 
 	query := `
     CREATE TABLE IF NOT EXISTS ceps (
-      CEP TEXT,
+      CEP TEXT PRIMARY KEY,
       LOGRADOURO TEXT,
       COMPLEMENTO TEXT,
       BAIRRO TEXT,
@@ -126,8 +126,15 @@ func (sr *SqliteCepRepository) CreateMany(ctx context.Context, ceps []structs.Ce
 	}()
 
 	stmt, err := tx.PrepareContext(ctx, `
-		INSERT INTO ceps (CEP, LOGRADOURO, COMPLEMENTO, BAIRRO, LOCALIDADE, UF, IBGE) 
-		VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO ceps (CEP, LOGRADOURO, COMPLEMENTO, BAIRRO, LOCALIDADE, UF, IBGE) 
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(CEP) DO UPDATE SET 
+        LOGRADOURO = excluded.LOGRADOURO,
+        COMPLEMENTO = excluded.COMPLEMENTO,
+        BAIRRO = excluded.BAIRRO,
+        LOCALIDADE = excluded.LOCALIDADE,
+        UF = excluded.UF,
+        IBGE = excluded.IBGE
   `)
 	if err != nil {
 		return fmt.Errorf("failed to prepare statement: %s", err)

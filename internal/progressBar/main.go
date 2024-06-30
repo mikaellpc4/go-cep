@@ -12,6 +12,7 @@ func Create(size int, text string) *progressbar.ProgressBar {
 		progressbar.OptionShowBytes(true),
 		progressbar.OptionSetWidth(15),
 		progressbar.OptionSetDescription(text),
+    progressbar.OptionClearOnFinish(),
 		progressbar.OptionSetTheme(progressbar.Theme{
 			Saucer:        "[green]█[reset]",
 			SaucerHead:    "[green]▌[reset]",

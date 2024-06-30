@@ -2,6 +2,7 @@ package insertData
 
 import (
 	"archive/zip"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -28,7 +29,8 @@ func UnzipCeps(zipFile string, unprocessedFilesChan chan<- []string, doneChan ch
 		log.Fatal(err)
 	}
 
-  bar := progressBar.Create(len(r.File), "Extraindo ZIP e Inserindo no banco de dados")
+	text := fmt.Sprintf("[cyan][4/4][reset] Extracting ZIP and Inserting on Database")
+	bar := progressBar.Create(len(r.File), text)
 
 	var files []string
 	for _, file := range r.File {
@@ -50,7 +52,7 @@ func UnzipCeps(zipFile string, unprocessedFilesChan chan<- []string, doneChan ch
 		tmpFile.Close()
 
 		files = append(files, tmpFile.Name())
-    bar.Add(1)
+		bar.Add(1)
 
 		if len(files) > 10000 {
 			unprocessedFilesChan <- files
