@@ -5,19 +5,28 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"os"
+  "os"
 
 	"github.com/GoCEP/api/cep/structs"
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/nakagami/firebirdsql"
 )
 
-type SqliteCepRepository struct {
+type FirebirdCepRepository struct {
 	db *sql.DB
 }
 
-func NewSqliteCepRepo() *SqliteCepRepository {
-	db, err := sql.Open("sqlite3", os.Getenv("SQLITE_PATH"))
+func NewFirebirdCepRepo() *FirebirdCepRepository {
 
+	host := os.Getenv("FIREBIRD_HOST")
+	port := os.Getenv("FIREBIRD_PORT")
+	user := os.Getenv("FIREBIRD_USER")
+	password := os.Getenv("FIREBIRD_PASSWORD")
+	path := os.Getenv("FIREBIRD_PATH")
+
+	dsn := fmt.Sprintf("%s:%s@%s:%s%s", user, password, host, port, path)
+  fmt.Println(dsn)
+
+	db, err := sql.Open("firebirdsql", dsn)
 	if err != nil {
 		error := fmt.Errorf("failed to open database: %w", err)
 		panic(error)
@@ -30,42 +39,35 @@ func NewSqliteCepRepo() *SqliteCepRepository {
 
 	query := `
     CREATE TABLE IF NOT EXISTS ceps (
-      CEP TEXT PRIMARY KEY,
-      LOGRADOURO TEXT,
-      COMPLEMENTO TEXT,
-      BAIRRO TEXT,
-      LOCALIDADE TEXT,
-      UF TEXT,
-      IBGE TEXT
+      CEP VARCHAR(9) PRIMARY KEY,
+      LOGRADOURO VARCHAR(100),
+      COMPLEMENTO VARCHAR(100),
+      BAIRRO VARCHAR(100),
+      LOCALIDADE VARCHAR(100),
+      UF VARCHAR(2),
+      IBGE VARCHAR(7)
     )
   `
 
-	_, err = db.Exec(
-		query,
-	)
-
+	_, err = db.Exec(query)
 	if err != nil {
 		error := fmt.Errorf("failed to create table cep: %w", err)
 		panic(error)
 	}
 
-	return &SqliteCepRepository{
+	return &FirebirdCepRepository{
 		db: db,
 	}
 }
 
-func (sr *SqliteCepRepository) Read(ctx context.Context, cep string) (*structs.Cep, error) {
+func (fr *FirebirdCepRepository) Read(ctx context.Context, cep string) (*structs.Cep, error) {
 	query := `
     SELECT CEP, LOGRADOURO, COMPLEMENTO, BAIRRO, LOCALIDADE, UF, IBGE
     FROM ceps
     WHERE CEP = ?
   `
 
-	row := sr.db.QueryRowContext(
-		ctx,
-		query,
-		cep,
-	)
+	row := fr.db.QueryRowContext(ctx, query, cep)
 
 	var result structs.Cep
 	err := row.Scan(
@@ -82,18 +84,18 @@ func (sr *SqliteCepRepository) Read(ctx context.Context, cep string) (*structs.C
 			return nil, nil
 		}
 
-		return nil, fmt.Errorf("faied to read cep: %w", err)
+		return nil, fmt.Errorf("failed to read cep: %w", err)
 	}
 
 	return &result, nil
 }
 
-func (sr *SqliteCepRepository) Create(ctx context.Context, cep structs.Cep) error {
+func (fr *FirebirdCepRepository) Create(ctx context.Context, cep structs.Cep) error {
 	query := `
 		INSERT INTO ceps (CEP, LOGRADOURO, COMPLEMENTO, BAIRRO, LOCALIDADE, UF, IBGE) 
 		VALUES (?, ?, ?, ?, ?, ?, ?)
   `
-	_, err := sr.db.ExecContext(
+	_, err := fr.db.ExecContext(
 		ctx,
 		query,
 		cep.ZipCode,
@@ -112,8 +114,8 @@ func (sr *SqliteCepRepository) Create(ctx context.Context, cep structs.Cep) erro
 	return nil
 }
 
-func (sr *SqliteCepRepository) CreateAndUpdateMany(ctx context.Context, ceps []structs.Cep) error {
-	tx, err := sr.db.BeginTx(ctx, nil)
+func (fr *FirebirdCepRepository) CreateAndUpdateMany(ctx context.Context, ceps []structs.Cep) error {
+	tx, err := fr.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("couldn't begin transaction")
 	}
@@ -127,15 +129,8 @@ func (sr *SqliteCepRepository) CreateAndUpdateMany(ctx context.Context, ceps []s
 	}()
 
 	stmt, err := tx.PrepareContext(ctx, `
-    INSERT INTO ceps (CEP, LOGRADOURO, COMPLEMENTO, BAIRRO, LOCALIDADE, UF, IBGE) 
+    UPDATE OR INSERT INTO ceps (CEP, LOGRADOURO, COMPLEMENTO, BAIRRO, LOCALIDADE, UF, IBGE) 
     VALUES (?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(CEP) DO UPDATE SET 
-        LOGRADOURO = excluded.LOGRADOURO,
-        COMPLEMENTO = excluded.COMPLEMENTO,
-        BAIRRO = excluded.BAIRRO,
-        LOCALIDADE = excluded.LOCALIDADE,
-        UF = excluded.UF,
-        IBGE = excluded.IBGE
   `)
 	if err != nil {
 		return fmt.Errorf("failed to prepare statement: %s", err)
@@ -164,10 +159,41 @@ func (sr *SqliteCepRepository) CreateAndUpdateMany(ctx context.Context, ceps []s
 	return nil
 }
 
-func (sr *SqliteCepRepository) Update(ctx context.Context, cep structs.Cep) error {
+func (fr *FirebirdCepRepository) Update(ctx context.Context, cep structs.Cep) error {
+	query := `
+		UPDATE ceps SET 
+		LOGRADOURO = ?, 
+		COMPLEMENTO = ?, 
+		BAIRRO = ?, 
+		LOCALIDADE = ?, 
+		UF = ?, 
+		IBGE = ? 
+		WHERE CEP = ?
+  `
+	_, err := fr.db.ExecContext(
+		ctx,
+		query,
+		cep.PublicPlace,
+		cep.Complement,
+		cep.District,
+		cep.Place,
+		cep.Uf,
+		cep.IbgeCode,
+		cep.ZipCode,
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to update cep: %w", err)
+	}
+
 	return nil
 }
 
-func (sr *SqliteCepRepository) Delete(ctx context.Context, cep string) error {
+func (fr *FirebirdCepRepository) Delete(ctx context.Context, cep string) error {
+	query := `DELETE FROM ceps WHERE CEP = ?`
+	_, err := fr.db.ExecContext(ctx, query, cep)
+	if err != nil {
+		return fmt.Errorf("failed to delete cep: %w", err)
+	}
 	return nil
 }

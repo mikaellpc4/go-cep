@@ -8,39 +8,18 @@ import (
 	"sync"
 
 	"github.com/GoCEP/api/cep/repository"
-	"github.com/GoCEP/api/cep/structs"
 	"github.com/GoCEP/internal/download"
 	"github.com/GoCEP/internal/insertData"
 )
 
 type CepService struct {
-	repo repository.CepRepositary
+	repos []repository.CepRepositary
 }
 
-func NewCepService(cepRepository repository.CepRepositary) *CepService {
+func NewCepService(cepRepository []repository.CepRepositary) *CepService {
 	return &CepService{
-		repo: cepRepository,
+		repos: cepRepository,
 	}
-}
-
-func (cepService *CepService) Read(ctx context.Context, cep string) (*structs.Cep, error) {
-	return cepService.repo.Read(ctx, cep)
-}
-
-func (cepService *CepService) Create(ctx context.Context, cep structs.Cep) error {
-	return cepService.repo.Create(ctx, cep)
-}
-
-func (cepService *CepService) CreateMany(ctx context.Context, ceps []structs.Cep) error {
-	return cepService.repo.CreateAndUpdateMany(ctx, ceps)
-}
-
-func (cepService *CepService) Update(ctx context.Context, cep structs.Cep) error {
-	return cepService.repo.Update(ctx, cep)
-}
-
-func (cepService *CepService) Delete(ctx context.Context, cep string) error {
-	return cepService.repo.Delete(ctx, cep)
 }
 
 func (cepService *CepService) UpdateData(ctx context.Context) error {
@@ -73,23 +52,20 @@ func (cepService *CepService) UpdateData(ctx context.Context) error {
 	var wg sync.WaitGroup
 
 	wg.Add(1)
-	go func() {
-		insertData.UnzipCeps(dataLocation, unprocessedFilesChan, doneZipChan, &wg)
-	}()
+	go insertData.UnzipCeps(dataLocation, unprocessedFilesChan, doneZipChan, &wg)
 
 	wg.Add(1)
-	go func() {
-		insertData.CleanJSON(unprocessedFilesChan, filesJSON, doneChan, doneZipChan, &wg)
-	}()
+	go insertData.CleanJSON(unprocessedFilesChan, filesJSON, doneChan, doneZipChan, &wg)
 
-	wg.Add(1)
-	go func() {
-		go insertData.InsertToDB(cepService.repo, filesJSON, doneChan, &wg)
-	}()
+	for _, repo := range cepService.repos {
+		wg.Add(1)
+		go insertData.InsertToDB(repo, filesJSON, doneChan, &wg)
+	}
 
 	wg.Wait()
+	close(filesJSON)
 
-  fmt.Println("finished CEP Update")
+	fmt.Println("finished CEP Update")
 
 	return nil
 }

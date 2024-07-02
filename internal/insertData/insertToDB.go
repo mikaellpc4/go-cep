@@ -12,7 +12,6 @@ import (
 
 func InsertToDB(repo repository.CepRepositary, filesJSON chan [][]byte, doneChan <-chan bool, wg *sync.WaitGroup) {
 	defer wg.Done()
-	defer close(filesJSON)
 
 	for {
 		select {
