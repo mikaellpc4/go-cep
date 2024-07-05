@@ -24,6 +24,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/GoCEP/api/cep/repository"
 	"github.com/GoCEP/api/cep/repository/implementations"
@@ -37,10 +38,11 @@ var updateCmd = &cobra.Command{
 	Short: "Update databases",
 	Long:  `Updates any existent repository with the newest data on OpenCEP`,
 	Run: func(cmd *cobra.Command, args []string) {
-		sqliteRepo := implementations.NewSqliteCepRepo()
+    start := time.Now()
+		// sqliteRepo := implementations.NewSqliteCepRepo()
 		firebirdRepo := implementations.NewFirebirdCepRepo()
 
-		repos := []repository.CepRepositary{sqliteRepo, firebirdRepo}
+		repos := []repository.CepRepositary{firebirdRepo}
 		service := services.NewCepService(repos)
 
 		context := context.Background()
@@ -48,6 +50,8 @@ var updateCmd = &cobra.Command{
 		if err != nil {
 			fmt.Printf("\na error ocurred while updating the data: %s\n", err)
 		}
+    finishedIn := time.Since(start)
+    fmt.Printf("finished in: %s", finishedIn.String())
 	},
 }
 

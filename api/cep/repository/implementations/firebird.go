@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-  "os"
+	"os"
 
 	"github.com/GoCEP/api/cep/structs"
 	_ "github.com/nakagami/firebirdsql"
@@ -24,7 +24,6 @@ func NewFirebirdCepRepo() *FirebirdCepRepository {
 	path := os.Getenv("FIREBIRD_PATH")
 
 	dsn := fmt.Sprintf("%s:%s@%s:%s%s", user, password, host, port, path)
-  fmt.Println(dsn)
 
 	db, err := sql.Open("firebirdsql", dsn)
 	if err != nil {
@@ -37,8 +36,21 @@ func NewFirebirdCepRepo() *FirebirdCepRepository {
 		panic(error)
 	}
 
-	query := `
-    CREATE TABLE IF NOT EXISTS ceps (
+	var tableExists bool
+	checkTableQuery := `
+		SELECT COUNT(*)
+		FROM rdb$relations
+		WHERE rdb$relation_name = 'CEPS'
+	`
+	err = db.QueryRow(checkTableQuery).Scan(&tableExists)
+	if err != nil {
+		error := fmt.Errorf("failed to check if table exists: %w", err)
+		panic(error)
+	}
+
+	if !tableExists {
+		query := `
+    CREATE TABLE ceps (
       CEP VARCHAR(9) PRIMARY KEY,
       LOGRADOURO VARCHAR(100),
       COMPLEMENTO VARCHAR(100),
@@ -46,13 +58,13 @@ func NewFirebirdCepRepo() *FirebirdCepRepository {
       LOCALIDADE VARCHAR(100),
       UF VARCHAR(2),
       IBGE VARCHAR(7)
-    )
-  `
+    )`
 
-	_, err = db.Exec(query)
-	if err != nil {
-		error := fmt.Errorf("failed to create table cep: %w", err)
-		panic(error)
+		_, err = db.Exec(query)
+		if err != nil {
+			error := fmt.Errorf("failed to create table cep: %w", err)
+			panic(error)
+		}
 	}
 
 	return &FirebirdCepRepository{

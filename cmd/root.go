@@ -22,14 +22,135 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 
+	"github.com/GoCEP/api/cep/repository"
+	"github.com/GoCEP/api/cep/repository/implementations"
+	"github.com/GoCEP/api/cep/services"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 var cfgFile string
+
+type model struct {
+	choices    []string             // items on the to-do list
+	cursor     int                  // which to-do list item our cursor is pointing at
+	selected   map[int]struct{}     // which to-do items are selected
+	CepActions *services.CepService // actions of the choices
+}
+
+func (m model) View() string {
+	// The header
+	s := "Oque deseja fazer?\n\n"
+
+	// Iterate over our choices
+	for i, choice := range m.choices {
+
+		// Is the cursor pointing at this choice?
+		cursor := " " // no cursor
+		if m.cursor == i {
+			cursor = ">" // cursor!
+		}
+
+		// Is this choice selected?
+		checked := " " // not selected
+		if _, ok := m.selected[i]; ok {
+			checked = "x" // selected!
+		}
+
+		// Render the row
+		s += fmt.Sprintf("%s [%s] %s\n", cursor, checked, choice)
+	}
+
+	// The footer
+	s += "\nctrl+y para confirmar opção."
+	s += "\nPress q to quit.\n"
+
+	// Send the UI for rendering
+	return s
+}
+
+func initialModel(cepService *services.CepService) model {
+	return model{
+		// Our to-do list is a grocery list
+		choices: []string{"Atualizar bases", "Hello"},
+
+		// A map which indicates which choices are selected. We're using
+		// the  map like a mathematical set. The keys refer to the indexes
+		// of the `choices` slice, above.
+		selected:   make(map[int]struct{}),
+		CepActions: cepService,
+	}
+}
+
+func (m model) Init() tea.Cmd {
+	// Just return `nil`, which means "no I/O right now, please."
+	return nil
+}
+
+func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+
+	// Is it a key press?
+	case tea.KeyMsg:
+
+		// Cool, what was the actual key pressed?
+		switch msg.String() {
+
+		// These keys should exit the program.
+		case "ctrl+c", "q":
+			return m, tea.Quit
+
+		case "ctrl+y":
+			ctx := context.Background()
+			update := false
+			for selected := range m.selected {
+				if selected == 0 {
+					update = true
+				}
+			}
+
+			if update {
+				go m.CepActions.UpdateData(ctx)
+			}
+
+			return m, nil
+
+		// The "up" and "k" keys move the cursor up
+		case "up", "k":
+			if m.cursor > 0 {
+				m.cursor--
+			}
+
+		// The "down" and "j" keys move the cursor down
+		case "down", "j":
+			if m.cursor < len(m.choices)-1 {
+				m.cursor++
+			}
+
+		// The "enter" key and the spacebar (a literal space) toggle
+		// the selected state for the item that the cursor is pointing at.
+		case "enter", " ":
+			_, ok := m.selected[m.cursor]
+			if ok {
+				delete(m.selected, m.cursor)
+			} else {
+				for selected := range m.selected {
+					delete(m.selected, selected)
+				}
+				m.selected[m.cursor] = struct{}{}
+			}
+		}
+	}
+
+	// Return the updated model to the Bubble Tea runtime for processing.
+	// Note that we're not returning a command.
+	return m, nil
+}
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -44,6 +165,15 @@ to quickly create a Cobra application.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	// Run: func(cmd *cobra.Command, args []string) { },
+	Run: func(cmd *cobra.Command, args []string) {
+		cepRepo := implementations.NewFirebirdCepRepo()
+		cepService := services.NewCepService([]repository.CepRepositary{cepRepo})
+		p := tea.NewProgram(initialModel(cepService))
+		if _, err := p.Run(); err != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

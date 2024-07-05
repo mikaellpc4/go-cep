@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	"github.com/GoCEP/api/cep/repository"
-	"github.com/GoCEP/internal/download"
+	// "github.com/GoCEP/internal/download"
 	"github.com/GoCEP/internal/insertData"
 )
 
@@ -40,10 +40,10 @@ func (cepService *CepService) UpdateData(ctx context.Context) error {
 		}
 	}
 
-	err = download.File(os.Getenv("CEP_DATA_URL"), dataLocation)
-	if err != nil {
-		return fmt.Errorf("failed to download CEP data: %w", err)
-	}
+	// err = download.File(os.Getenv("CEP_DATA_URL"), dataLocation)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to download CEP data: %w", err)
+	// }
 
 	unprocessedFilesChan := make(chan []string)
 	filesJSON := make(chan [][]byte)
