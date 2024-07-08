@@ -39,10 +39,10 @@ var updateCmd = &cobra.Command{
 	Long:  `Updates any existent repository with the newest data on OpenCEP`,
 	Run: func(cmd *cobra.Command, args []string) {
     start := time.Now()
-		// sqliteRepo := implementations.NewSqliteCepRepo()
-		firebirdRepo := implementations.NewFirebirdCepRepo()
+		sqliteRepo := implementations.NewSqliteCepRepo()
+		// firebirdRepo := implementations.NewFirebirdCepRepo()
 
-		repos := []repository.CepRepositary{firebirdRepo}
+		repos := []repository.CepRepositary{sqliteRepo}
 		service := services.NewCepService(repos)
 
 		context := context.Background()

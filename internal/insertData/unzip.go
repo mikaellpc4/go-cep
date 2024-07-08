@@ -1,67 +1,115 @@
 package insertData
 
 import (
-	"archive/zip"
+	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"log"
 	"os"
-	"sync"
+	"strconv"
 
-	"github.com/GoCEP/internal/progressBar"
+	"github.com/mholt/archiver/v4"
 )
 
-func UnzipCeps(zipFile string, unprocessedFilesChan chan<- []string, doneChan chan<- bool, wg *sync.WaitGroup) {
+func CountFilesInZip(zipFile string) (int, error) {
+	format := archiver.Zip{}
+
+	var fileCount int
+
+	handler := func(ctx context.Context, f archiver.File) error {
+		fileCount++
+		return nil
+	}
+
+	file, err := os.Open(zipFile)
+	if err != nil {
+		return 0, fmt.Errorf("error reading file: %v", err)
+	}
+	defer file.Close()
+
+	ctx := context.Background()
+
+	// Extract with a nil handler to only count files
+	err = format.Extract(ctx, file, nil, handler)
+	if err != nil {
+		return 0, fmt.Errorf("error counting files in zip: %v", err)
+	}
+
+	return fileCount, nil
+}
+
+func cleanJSON(file []byte) []byte {
+	// Find the last occurrence of '}' in the byte slice
+	endIndex := bytes.LastIndexByte(file, '}')
+
+	// If '}' is found, slice the byte slice up to '}' (inclusive)
+	if endIndex != -1 {
+		file = file[:endIndex+1]
+	}
+
+	return file
+}
+
+func UnzipCeps(zipFile string, filesChan chan<- [][]byte, doneChan chan<- bool, setProgress func(percentage float64)) {
 	defer close(doneChan)
-	defer wg.Done()
 
-	r, err := zip.OpenReader(zipFile)
+	format := archiver.Zip{}
+	var batch [][]byte
+
+	batchSize, _ := strconv.Atoi(os.Getenv("MAX_BATCH_SIZE"))
+
+	totalFiles, err := CountFilesInZip(zipFile)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Error counting files in zip: %v", err)
+		return
 	}
-	defer func() {
-		if err := r.Close(); err != nil {
-			log.Printf("Failed to unzip file, error: %s", err)
-		}
-	}()
 
+  index := 1
+
+	handler := func(ctx context.Context, f archiver.File) error {
+		file, err := f.Open()
+		if err != nil {
+			log.Printf("Error reading file: %v", err)
+		}
+		defer file.Close()
+
+    percentage := float64(index)/float64(totalFiles)
+    setProgress(percentage)
+    index++
+
+		data, err := io.ReadAll(file)
+		if err != nil {
+			return err
+		}
+
+		cleanedData := cleanJSON(data)
+
+		batch = append(batch, cleanedData)
+
+		if len(batch) >= batchSize {
+			filesChan <- batch
+			batch = nil
+		}
+
+		return nil
+	}
+
+	file, err := os.Open(zipFile)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Error reading file: %v", err)
 	}
 
-	text := fmt.Sprintf("[cyan][4/4][reset] Extracting ZIP and Inserting on Database")
-	bar := progressBar.Create(len(r.File), text)
+	ctx := context.Background()
 
-	var files []string
-	for _, file := range r.File {
-		tmpFile, err := os.CreateTemp("", "go-cep-*.tmp")
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		rc, err := file.Open()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		_, err = io.Copy(tmpFile, rc)
-		if err != nil {
-			log.Fatal(err)
-		}
-		rc.Close()
-		tmpFile.Close()
-
-		files = append(files, tmpFile.Name())
-		bar.Add(1)
-
-		if len(files) > 10000 {
-			unprocessedFilesChan <- files
-			files = nil
-		}
+	err = format.Extract(ctx, file, nil, handler)
+	if err != nil {
+		log.Printf("Error extracting file: %v", err)
 	}
 
-	if len(files) > 0 {
-		unprocessedFilesChan <- files
+	if len(batch) > 0 {
+		filesChan <- batch
+		batch = nil
 	}
 
 	doneChan <- true

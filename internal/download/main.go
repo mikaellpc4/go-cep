@@ -5,8 +5,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-
-	"github.com/GoCEP/internal/progressBar"
 )
 
 func File(url string, filePath string) error {
@@ -37,11 +35,11 @@ func File(url string, filePath string) error {
 		}
 	}()
 
-	text := fmt.Sprintf("[cyan][1/4][reset] Downloading cep data to %s", tmpFile.Name())
+	// text := fmt.Sprintf("[cyan][1/4][reset] Downloading cep data to %s", tmpFile.Name())
 
-	bar := progressBar.Create(int(resp.ContentLength), text)
+	// bar := progressBar.Create(int(resp.ContentLength), text)
 
-	_, err = io.Copy(io.MultiWriter(tmpFile, bar), resp.Body)
+	_, err = io.Copy(tmpFile, resp.Body)
 	if err != nil {
 		return err
 	}
@@ -72,17 +70,17 @@ func File(url string, filePath string) error {
 	}
 	defer dst.Close()
 
-	fileInfo, err := tmpFile.Stat()
-	if err != nil {
-		return err
-	}
+	// fileInfo, err := tmpFile.Stat()
+	// if err != nil {
+	// 	return err
+	// }
 
-	size := fileInfo.Size()
+	// size := fileInfo.Size()
 
-	text = fmt.Sprintf("[cyan][3/4][reset] Saving %s", filePath)
-	bar = progressBar.Create(int(size), text)
+	// text = fmt.Sprintf("[cyan][3/4][reset] Saving %s", filePath)
+	// bar = progressBar.Create(int(size), text)
 
-	if _, err := io.Copy(io.MultiWriter(dst, bar), src); err != nil {
+	if _, err := io.Copy(dst, src); err != nil {
 		return err
 	}
 

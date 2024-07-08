@@ -1,27 +1,12 @@
 package insertData
 
 import (
-	"bytes"
 	"log"
 	"os"
 	"strconv"
-	"sync"
 )
 
-func cleanJSON(file []byte) []byte {
-	// Find the last occurrence of '}' in the byte slice
-	endIndex := bytes.LastIndexByte(file, '}')
-
-	// If '}' is found, slice the byte slice up to '}' (inclusive)
-	if endIndex != -1 {
-		file = file[:endIndex+1]
-	}
-
-	return file
-}
-
-func CleanJSON(unprocessedFilesChan <-chan []string, filesChan chan<- [][]byte, doneChan chan<- bool, doneZipChan <-chan bool, wg *sync.WaitGroup) {
-	defer wg.Done()
+func CleanJSON(unprocessedFilesChan <-chan []string, filesChan chan<- [][]byte, doneChan chan<- bool, doneZipChan <-chan bool, setCleanJSONProgress func(float64)) {
 	defer close(doneChan)
 
 	batchEnv := os.Getenv("MAX_BATCH_SIZE")
@@ -39,7 +24,7 @@ func CleanJSON(unprocessedFilesChan <-chan []string, filesChan chan<- [][]byte, 
 			if !ok {
 				return
 			}
-			for _, filePath := range filesPath {
+			for i, filePath := range filesPath {
 				fileContent, err := os.ReadFile(filePath)
 				if err != nil {
 					log.Printf("Error reading file %s: %v", filePath, err)
@@ -51,6 +36,9 @@ func CleanJSON(unprocessedFilesChan <-chan []string, filesChan chan<- [][]byte, 
 				batch = append(batch, cleanedData)
 
 				os.Remove(filePath)
+
+				percentage := float64(i + 1) / float64(len(filesPath)) 
+				setCleanJSONProgress(percentage)
 
 				if len(batch) >= batchSize {
 					filesChan <- batch

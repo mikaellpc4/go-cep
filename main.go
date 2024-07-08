@@ -27,7 +27,7 @@ import (
 )
 
 func main() {
-  initializers.LoadEnv()
+	initializers.LoadEnv()
 
 	cmd.Execute()
 }
